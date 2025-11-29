@@ -1,9 +1,9 @@
-"""Claude Agent SDK client wrapper."""
+"""Claude Agent SDK client wrapper using ClaudeSDKClient."""
 
 import logging
 from typing import Optional
 
-from claude_agent_sdk import query, ClaudeAgentOptions, AssistantMessage, TextBlock, ResultMessage
+from claude_agent_sdk import ClaudeSDKClient, ClaudeAgentOptions, AssistantMessage, TextBlock, ResultMessage
 
 from .config import get_settings
 
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class AgentClient:
-    """Wrapper around Claude Agent SDK with sensible defaults."""
+    """Wrapper around Claude Agent SDK using ClaudeSDKClient."""
 
     def __init__(
         self,
@@ -61,7 +61,7 @@ Be concise, accurate, and helpful in your responses."""
         )
 
     async def query(self, prompt: str) -> str:
-        """Execute a query and return the response.
+        """Execute a query using ClaudeSDKClient and return the response.
 
         Args:
             prompt: The user's query
@@ -75,18 +75,21 @@ Be concise, accurate, and helpful in your responses."""
         options = self._get_options()
         response_text = ""
 
-        async for message in query(prompt=prompt, options=options):
-            logger.debug(f"Received message type: {type(message).__name__}")
+        async with ClaudeSDKClient(options=options) as client:
+            await client.query(prompt)
 
-            # Handle AssistantMessage with TextBlocks
-            if isinstance(message, AssistantMessage):
-                for block in message.content:
-                    if isinstance(block, TextBlock):
-                        response_text = block.text
+            async for message in client.receive_response():
+                logger.debug(f"Received message type: {type(message).__name__}")
 
-            # Handle ResultMessage (final message with result)
-            elif isinstance(message, ResultMessage):
-                if hasattr(message, 'result') and message.result:
-                    response_text = message.result
+                # Handle AssistantMessage with TextBlocks
+                if isinstance(message, AssistantMessage):
+                    for block in message.content:
+                        if isinstance(block, TextBlock):
+                            response_text = block.text
+
+                # Handle ResultMessage (final message with result)
+                elif isinstance(message, ResultMessage):
+                    if hasattr(message, 'result') and message.result:
+                        response_text = message.result
 
         return response_text or "No response generated."
