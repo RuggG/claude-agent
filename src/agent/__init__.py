@@ -1,6 +1,6 @@
-"""Claude Agent SDK service."""
+"""Claude Agent service."""
 
 from .client import AgentClient
-from .config import settings
+from .config import get_settings
 
-__all__ = ["AgentClient", "settings"]
+__all__ = ["AgentClient", "get_settings"]

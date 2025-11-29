@@ -1,4 +1,4 @@
-"""Configuration management for Claude Agent SDK."""
+"""Configuration management for Claude Agent service."""
 
 import os
 from dataclasses import dataclass, field
@@ -14,19 +14,10 @@ class Settings:
 
     # Model Configuration
     model: str = field(default_factory=lambda: os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5-20250929"))
-    max_turns: int = field(default_factory=lambda: int(os.environ.get("MAX_TURNS", "20")))
 
     # Server Configuration
     port: int = field(default_factory=lambda: int(os.environ.get("PORT", "8080")))
     host: str = field(default_factory=lambda: os.environ.get("HOST", "0.0.0.0"))
-
-    # Tool Configuration
-    allowed_tools: list[str] = field(default_factory=lambda: [
-        "Read", "Write", "Edit", "Glob", "Grep"
-    ])
-    disallowed_tools: list[str] = field(default_factory=lambda: [
-        "Bash"  # Restrict shell access by default for safety
-    ])
 
     def validate_api_key(self):
         """Validate API key is present. Call before making API requests."""
@@ -53,7 +44,3 @@ def get_settings() -> Settings:
     if _settings is None:
         _settings = Settings.load()
     return _settings
-
-
-# For convenience
-settings = property(get_settings)
