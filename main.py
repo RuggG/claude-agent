@@ -57,11 +57,31 @@ async def health():
 
 @app.get("/debug/env")
 async def debug_env():
-    """Debug endpoint to check env vars."""
+    """Debug endpoint to check env vars and CLI availability."""
+    import subprocess
+    import shutil
+
+    # Check if claude CLI is available
+    claude_path = shutil.which("claude")
+    node_path = shutil.which("node")
+    npm_path = shutil.which("npm")
+
+    # Try to get claude version
+    claude_version = None
+    try:
+        result = subprocess.run(["claude", "--version"], capture_output=True, text=True, timeout=10)
+        claude_version = result.stdout.strip() if result.returncode == 0 else f"error: {result.stderr}"
+    except Exception as e:
+        claude_version = f"exception: {str(e)}"
+
     return {
         "anthropic_key_present": "ANTHROPIC_API_KEY" in os.environ,
         "anthropic_key_length": len(os.environ.get("ANTHROPIC_API_KEY", "")),
         "port": os.environ.get("PORT", "not set"),
+        "claude_path": claude_path,
+        "claude_version": claude_version,
+        "node_path": node_path,
+        "npm_path": npm_path,
     }
 
 
@@ -86,18 +106,28 @@ async def query(request: QueryRequest):
     Returns:
         Agent response with result and model used
     """
+    import traceback
+
+    logger.info(f"Query received: {request.prompt[:50]}...")
+
     try:
         # Get settings for model info
+        logger.info("Loading settings...")
         settings = get_settings()
+        logger.info(f"Settings loaded. Model: {settings.model}")
 
         # Initialize client with optional overrides
+        logger.info("Initializing AgentClient...")
         client = AgentClient(
             system_prompt=request.system_prompt,
             model=request.model,
         )
+        logger.info("AgentClient initialized")
 
         # Execute query
+        logger.info("Executing query...")
         result = await client.query(request.prompt)
+        logger.info(f"Query completed. Result length: {len(result)}")
 
         return QueryResponse(
             result=result,
@@ -107,11 +137,13 @@ async def query(request: QueryRequest):
     except ValueError as e:
         # Configuration errors (missing API key, etc.)
         logger.error(f"Configuration error: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         # Unexpected errors
-        logger.exception(f"Query failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
+        logger.error(f"Query failed: {type(e).__name__}: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Query failed: {type(e).__name__}: {str(e)}")
 
 
 if __name__ == "__main__":

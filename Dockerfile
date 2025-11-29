@@ -24,8 +24,8 @@ COPY . .
 # Set Python path
 ENV PYTHONPATH=/app/src
 
-# Expose port (Render uses PORT env var)
+# Expose port (Render uses PORT env var, default 10000)
 EXPOSE 10000
 
-# Start the server
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+# Start the server using shell form to allow env var expansion
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
