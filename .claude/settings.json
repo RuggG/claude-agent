@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": ["Read", "Write", "Edit", "Glob", "Grep"],
+    "deny": ["Bash"],
+    "defaultMode": "plan"
+  },
+  "model": "claude-sonnet-4-5-20250929"
+}
