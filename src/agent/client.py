@@ -1,4 +1,4 @@
-"""Claude Agent SDK client wrapper using ClaudeSDKClient."""
+"""Claude Agent SDK client wrapper."""
 
 import logging
 from typing import Optional
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class AgentClient:
-    """Wrapper around Claude Agent SDK using ClaudeSDKClient."""
+    """Wrapper around Claude Agent SDK using ClaudeSDKClient for session management."""
 
     def __init__(
         self,
@@ -61,7 +61,7 @@ Be concise, accurate, and helpful in your responses."""
         )
 
     async def query(self, prompt: str) -> str:
-        """Execute a query using ClaudeSDKClient and return the response.
+        """Execute a query and return the response using ClaudeSDKClient.
 
         Args:
             prompt: The user's query

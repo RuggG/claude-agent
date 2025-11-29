@@ -5,18 +5,11 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install all dependencies (including devDependencies for build)
-RUN npm ci
+# Install dependencies
+RUN npm ci --only=production
 
-# Copy source files
-COPY tsconfig.json ./
-COPY src ./src
-
-# Build TypeScript
-RUN npm run build
-
-# Remove devDependencies after build
-RUN npm prune --production
+# Copy built application
+COPY dist ./dist
 
 # Set environment
 ENV NODE_ENV=production
