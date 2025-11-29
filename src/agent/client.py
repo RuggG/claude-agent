@@ -1,9 +1,9 @@
-"""Claude API client wrapper using the Anthropic SDK."""
+"""Claude Agent SDK client wrapper."""
 
 import logging
 from typing import Optional
 
-from anthropic import AsyncAnthropic
+from claude_agent_sdk import query, ClaudeAgentOptions, AssistantMessage, TextBlock, ResultMessage
 
 from .config import get_settings
 
@@ -11,26 +11,31 @@ logger = logging.getLogger(__name__)
 
 
 class AgentClient:
-    """Wrapper around Anthropic API with sensible defaults."""
+    """Wrapper around Claude Agent SDK with sensible defaults."""
 
     def __init__(
         self,
         system_prompt: Optional[str] = None,
         model: Optional[str] = None,
-        max_tokens: int = 4096,
+        max_turns: Optional[int] = None,
+        cwd: Optional[str] = None,
+        allowed_tools: Optional[list[str]] = None,
     ):
         """Initialize agent client.
 
         Args:
             system_prompt: Custom system prompt (uses default if not provided)
             model: Model to use (uses settings default if not provided)
-            max_tokens: Maximum tokens in response
+            max_turns: Maximum conversation turns
+            cwd: Working directory for file operations
+            allowed_tools: List of permitted tools
         """
         self._settings = get_settings()
         self.system_prompt = system_prompt or self._default_system_prompt()
         self.model = model or self._settings.model
-        self.max_tokens = max_tokens
-        self._client: Optional[AsyncAnthropic] = None
+        self.max_turns = max_turns or 20
+        self.cwd = cwd or "/tmp"
+        self.allowed_tools = allowed_tools or ["Read", "Glob", "Grep"]
 
     def _default_system_prompt(self) -> str:
         """Default system prompt for the agent."""
@@ -44,12 +49,16 @@ You can help with:
 
 Be concise, accurate, and helpful in your responses."""
 
-    def _get_client(self) -> AsyncAnthropic:
-        """Get or create Anthropic client."""
-        if self._client is None:
-            self._settings.validate_api_key()
-            self._client = AsyncAnthropic(api_key=self._settings.anthropic_api_key)
-        return self._client
+    def _get_options(self) -> ClaudeAgentOptions:
+        """Build SDK options."""
+        return ClaudeAgentOptions(
+            system_prompt=self.system_prompt,
+            model=self.model,
+            max_turns=self.max_turns,
+            cwd=self.cwd,
+            allowed_tools=self.allowed_tools,
+            permission_mode="acceptEdits",
+        )
 
     async def query(self, prompt: str) -> str:
         """Execute a query and return the response.
@@ -60,21 +69,24 @@ Be concise, accurate, and helpful in your responses."""
         Returns:
             The agent's response as a string
         """
+        self._settings.validate_api_key()
         logger.info(f"Processing query: {prompt[:100]}...")
 
-        client = self._get_client()
+        options = self._get_options()
+        response_text = ""
 
-        message = await client.messages.create(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            system=self.system_prompt,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
+        async for message in query(prompt=prompt, options=options):
+            logger.debug(f"Received message type: {type(message).__name__}")
 
-        # Extract text from response
-        if message.content and len(message.content) > 0:
-            return message.content[0].text
+            # Handle AssistantMessage with TextBlocks
+            if isinstance(message, AssistantMessage):
+                for block in message.content:
+                    if isinstance(block, TextBlock):
+                        response_text = block.text
 
-        return "No response generated."
+            # Handle ResultMessage (final message with result)
+            elif isinstance(message, ResultMessage):
+                if hasattr(message, 'result') and message.result:
+                    response_text = message.result
+
+        return response_text or "No response generated."
