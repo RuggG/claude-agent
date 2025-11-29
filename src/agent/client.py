@@ -81,7 +81,11 @@ Be concise, accurate, and helpful in your responses."""
         # Extract final text response
         if messages:
             last_message = messages[-1]
-            # Handle different message types
+            # Handle different message types from SDK
+            # ResultMessage has 'result' attribute with the final answer
+            if hasattr(last_message, 'result'):
+                return str(last_message.result)
+            # AssistantMessage has 'content' attribute
             if hasattr(last_message, 'content'):
                 return str(last_message.content)
             return str(last_message)
