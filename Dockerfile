@@ -1,21 +1,31 @@
-FROM node:20-slim
+FROM python:3.11-slim
 
+# Install Node.js (required for Claude Code CLI)
+RUN apt-get update && apt-get install -y \
+    curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Claude Code CLI globally
+RUN npm install -g @anthropic-ai/claude-code
+
+# Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy requirements first for better caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install dependencies
-RUN npm ci --only=production
+# Copy application code
+COPY . .
 
-# Copy built application
-COPY dist ./dist
+# Set Python path
+ENV PYTHONPATH=/app/src
 
-# Set environment
-ENV NODE_ENV=production
+# Expose port (Render uses PORT env var, default 10000)
+EXPOSE 10000
 
-# Expose port (Render uses PORT env var)
-EXPOSE 3000
-
-# Start the server
-CMD ["node", "dist/index.js"]
+# Start the server using shell form to allow env var expansion
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
