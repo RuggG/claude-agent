@@ -21,6 +21,10 @@ class Settings:
 
     def validate_api_key(self):
         """Validate API key is present. Call before making API requests."""
+        # Reload from env in case it wasn't available at init time
+        if not self.anthropic_api_key:
+            self.anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+
         if not self.anthropic_api_key:
             raise ValueError(
                 "ANTHROPIC_API_KEY not found. "
