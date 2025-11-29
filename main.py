@@ -14,6 +14,10 @@ from pydantic import BaseModel
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
+# Debug: Log env vars at startup
+print(f"DEBUG: ANTHROPIC_API_KEY present: {'ANTHROPIC_API_KEY' in os.environ}")
+print(f"DEBUG: ANTHROPIC_API_KEY length: {len(os.environ.get('ANTHROPIC_API_KEY', ''))}")
+
 from agent.client import AgentClient
 from agent.config import get_settings
 
@@ -49,6 +53,16 @@ class QueryResponse(BaseModel):
 async def health():
     """Health check endpoint for Render."""
     return {"status": "ok"}
+
+
+@app.get("/debug/env")
+async def debug_env():
+    """Debug endpoint to check env vars."""
+    return {
+        "anthropic_key_present": "ANTHROPIC_API_KEY" in os.environ,
+        "anthropic_key_length": len(os.environ.get("ANTHROPIC_API_KEY", "")),
+        "port": os.environ.get("PORT", "not set"),
+    }
 
 
 @app.get("/")
